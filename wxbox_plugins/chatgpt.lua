@@ -46,6 +46,7 @@ function chatgpt.receive_text_message(event)
 
     local prompt_hint = 'prompt: '
     local prompt_with_max_tokens_pattern = '^prompt%[(%d+)%]: (.+)'
+    local prompt_image_hint = 'prompt_image: '
 
     max_tokens, pattern = string.match(message, prompt_with_max_tokens_pattern)
 
@@ -65,6 +66,9 @@ function chatgpt.receive_text_message(event)
 
         -- wxbox.info(prompt)
         -- wxbox.info(response)
+    elseif string.sub(message, 1, string.len(prompt_image_hint)) == prompt_image_hint then
+        local prompt = string.sub(message, string.len(prompt_image_hint))
+        chatgpt.async_gen_image(wxid, prompt)
     end
 
     wxbox.info('chatgpt.receive_text_message wxid : ' .. event:wxid())
@@ -174,13 +178,28 @@ end
 
 function chatgpt.async_request_callback(response, data)
     local context = JSON:decode(data)
-    wxbox.send_text(context['wxid'], response)
-    wxbox.info('send to : ' .. context['wxid'])
+    local response_json = JSON:decode(response)
+
+    if response_json['result_text'] ~= nil then
+        wxbox.send_text(context['wxid'], response_json['result_text'])
+        wxbox.info('send text to : ' .. context['wxid'])
+    elseif response_json['path'] ~= nil then
+        wxbox.send_file(context['wxid'], response_json['path'])
+        wxbox.info('send file to : ' .. context['wxid'])
+    end
 end
 
 function chatgpt.async_ask(wxid, prompt, max_tokens)
     local encoded_prompt = urlencode.encode_url(prompt)
     local url = 'http://127.0.0.1:5000/question?prompt=' .. encoded_prompt .. '&max_tokens=' .. max_tokens
+    local context = {['wxid']=wxid, ['url']=url}
+
+    ar.request(url, JSON:encode(context))
+end
+
+function chatgpt.async_gen_image(wxid, prompt)
+    local encoded_prompt = urlencode.encode_url(prompt)
+    local url = 'http://127.0.0.1:5000/image?prompt=' .. encoded_prompt
     local context = {['wxid']=wxid, ['url']=url}
 
     ar.request(url, JSON:encode(context))
