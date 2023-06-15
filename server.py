@@ -10,8 +10,8 @@ from PIL import Image
 from io import BytesIO
 
 proxies = {
-    "http": "http://127.0.0.1:33210",
-    "https": "http://127.0.0.1:33210",
+    "http": "http://127.0.0.1:23457",
+    "https": "http://127.0.0.1:23457",
 }
 
 app = Flask(__name__)
